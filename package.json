@@ -1,0 +1,46 @@
+{
+  "name": "quota-hud",
+  "version": "1.0.0",
+  "description": "Always-on-top Windows widget for SuperGrok and ChatGPT/Codex quota. Read-only credentials.",
+  "main": "src/main/main.js",
+  "author": "Quota HUD",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "preview": "node scripts/preview-server.js",
+    "dist:win": "electron-builder --win portable"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.quotahud.widget",
+    "productName": "配额小组件",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "quota-hud-portable.${ext}"
+    }
+  }
+}

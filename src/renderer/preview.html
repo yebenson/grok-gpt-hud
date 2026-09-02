@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>配额小组件预览</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="preview">
+    <div class="frame" id="frame">
+      <header class="titlebar">
+        <span class="source-pill" id="sourcePill">Hermes</span>
+        <span class="hint">右键切换来源</span>
+      </header>
+      <div class="loading" id="loading">正在读取配额…</div>
+      <main class="dashboard hidden" id="dashboard">
+        <section class="panel grok-panel" id="grokPanel">
+          <div class="panel-head">
+            <span class="logo grok-logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 1.6 14.7 9.3 22.4 12 14.7 14.7 12 22.4 9.3 14.7 1.6 12 9.3 9.3Z"
+                />
+              </svg>
+            </span>
+          </div>
+          <div class="accounts" id="grokAccounts"></div>
+        </section>
+        <section class="panel gpt-panel" id="gptPanel">
+          <div class="panel-head">
+            <span class="logo gpt-logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M12 3.2 14.4 7.6 19.2 8.4 15.6 12 16.8 16.8 12 14.8 7.2 16.8 8.4 12 4.8 8.4 9.6 7.6Z"
+                />
+                <circle cx="12" cy="12" r="3.1" />
+                <circle cx="12" cy="4.2" r="1.15" />
+                <circle cx="18.2" cy="7.6" r="1.15" />
+                <circle cx="18.2" cy="16.4" r="1.15" />
+                <circle cx="12" cy="19.8" r="1.15" />
+                <circle cx="5.8" cy="16.4" r="1.15" />
+                <circle cx="5.8" cy="7.6" r="1.15" />
+              </svg>
+            </span>
+          </div>
+          <div class="accounts" id="gptAccounts"></div>
+        </section>
+      </main>
+    </div>
+    <script src="./gauges.js"></script>
+    <script src="./preview-bridge.js"></script>
+    <script src="./renderer.js"></script>
+  </body>
+</html>
