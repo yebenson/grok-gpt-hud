@@ -1,5 +1,7 @@
 "use strict";
 
+const { maskEmail, displayLabel } = require("./mask");
+
 function formatReset(resetAt, now = new Date()) {
   if (resetAt == null) return "";
   let date;
@@ -35,8 +37,8 @@ function toRendererAccount(result, visible) {
   const base = {
     id: account.id,
     side: account.side,
-    label: account.label,
-    email: account.email,
+    label: displayLabel(account),
+    email: account.email ? maskEmail(account.email) : null,
     visible,
   };
   if (!result.ok) {

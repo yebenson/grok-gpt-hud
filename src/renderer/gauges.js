@@ -32,7 +32,7 @@ function needleGauge({ remainingPercent, unlimited, hex, size = 126 }) {
       <path d="${arcPath(cx, cy, r, start, start + sweep * (unlimited || remainingPercent != null ? ratio : 0))}" stroke="${remainingPercent == null && !unlimited ? "transparent" : color}" stroke-width="7" fill="none" stroke-linecap="round" style="filter: drop-shadow(0 0 6px ${color})"/>
       ${showNeedle ? `<line x1="${cx}" y1="${cy}" x2="${needle.x}" y2="${needle.y}" stroke="${color}" stroke-width="2" stroke-linecap="round"/>` : ""}
       ${showNeedle ? `<circle cx="${cx}" cy="${cy}" r="3.2" fill="${color}"/>` : ""}
-      <text class="value" x="${cx}" y="${cy + (showNeedle ? 22 : 6)}" fill="${valueFill}">${label}</text>
+      <text class="value" x="${cx}" y="${cy + (showNeedle ? 22 : 6)}" fill="${valueFill}" font-family="Segoe UI, PingFang SC, Microsoft YaHei, sans-serif" font-size="15" font-weight="650">${label}</text>
     </svg>
   `;
 }
@@ -56,7 +56,7 @@ function ringGauge({ remainingPercent, unlimited, hex, size = 86, caption = "" }
         transform="rotate(-90 ${cx} ${cy})"
         style="filter: drop-shadow(0 0 6px ${stroke})"
       />
-      <text class="value" x="${cx}" y="${cy + 5}">${label}</text>
+      <text class="value" x="${cx}" y="${cy + 5}" font-family="Segoe UI, PingFang SC, Microsoft YaHei, sans-serif" font-size="14" font-weight="650">${label}</text>
     </svg>
     <div class="caption">${caption}</div>
   `;
