@@ -114,4 +114,29 @@ describe("credential file shapes", () => {
       false,
     );
   });
+
+  it("missing xai-oauth key in a present credential_pool does not ingest ChatGPT singleton tokens", () => {
+    const chatgptSingleton = "chatgpt-singleton-token";
+    const json = {
+      tokens: { access_token: chatgptSingleton, account_id: "org-chatgpt" },
+      credential_pool: {
+        "openai-codex": [{ id: "codex-1", label: "codex", access_token: chatgptSingleton }],
+      },
+    };
+    assert.equal(Object.prototype.hasOwnProperty.call(json.credential_pool, "xai-oauth"), false);
+    const grok = parseGrokAuth(json);
+    assert.equal(grok.length, 0);
+    assert.equal(
+      grok.some((account) => account.accessToken === chatgptSingleton),
+      false,
+    );
+    const loaded = loadFromSource(
+      "hermes",
+      { readFileSync: () => JSON.stringify(json) },
+      { hermes: "/hermes-auth.json" },
+    );
+    assert.equal(loaded.grok.accounts.length, 0);
+    assert.equal(loaded.grok.error.code, "emptyPool");
+    assert.equal(loaded.chatgpt.accounts.length, 1);
+  });
 });

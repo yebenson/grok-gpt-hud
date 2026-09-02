@@ -85,14 +85,13 @@ function credentialPool(json) {
   return asObject(json?.credential_pool) || asObject(json?.credentialPool);
 }
 
-function hasProviderPool(json, provider) {
-  const pool = credentialPool(json);
-  return Boolean(pool && Object.prototype.hasOwnProperty.call(pool, provider));
+function hasProviderPool(json) {
+  return Boolean(credentialPool(json));
 }
 
 function collectFromPool(json, provider, side) {
   const pool = credentialPool(json);
-  if (!pool || !Object.prototype.hasOwnProperty.call(pool, provider)) {
+  if (!pool) {
     return { present: false, accounts: [] };
   }
   const entries = pool[provider];
