@@ -81,16 +81,28 @@ function makeAccount({ side, id, entry, token, extra = {} }) {
   };
 }
 
+function credentialPool(json) {
+  return asObject(json?.credential_pool) || asObject(json?.credentialPool);
+}
+
+function hasProviderPool(json, provider) {
+  const pool = credentialPool(json);
+  return Boolean(pool && Object.prototype.hasOwnProperty.call(pool, provider));
+}
+
 function collectFromPool(json, provider, side) {
-  const pool = asObject(json?.credential_pool) || asObject(json?.credentialPool);
-  const entries = pool?.[provider];
-  if (!Array.isArray(entries)) return [];
+  const pool = credentialPool(json);
+  if (!pool || !Object.prototype.hasOwnProperty.call(pool, provider)) {
+    return { present: false, accounts: [] };
+  }
+  const entries = pool[provider];
+  if (!Array.isArray(entries)) return { present: true, accounts: [] };
   const out = [];
   entries.forEach((entry, index) => {
     const id = entry?.id || entry?.label || `${provider}-${index}`;
     uniquePush(out, makeAccount({ side, id, entry }));
   });
-  return out;
+  return { present: true, accounts: out };
 }
 
 function collectCodexSingleton(json) {
@@ -165,7 +177,7 @@ function collectProviderSingleton(json, provider, side) {
 
 function parseChatgptAuth(json) {
   const fromPool = collectFromPool(json, "openai-codex", "chatgpt");
-  if (fromPool.length) return fromPool;
+  if (fromPool.present) return fromPool.accounts;
   const fromAccounts = collectAccountsArray(json, "chatgpt");
   if (fromAccounts.length) return fromAccounts;
   const fromSingleton = collectCodexSingleton(json);
@@ -175,7 +187,7 @@ function parseChatgptAuth(json) {
 
 function parseGrokAuth(json) {
   const fromPool = collectFromPool(json, "xai-oauth", "grok");
-  if (fromPool.length) return fromPool;
+  if (fromPool.present) return fromPool.accounts;
   const fromAccounts = collectAccountsArray(json, "grok");
   if (fromAccounts.length) return fromAccounts;
   const fromMap = collectGrokCliMap(json);
@@ -263,4 +275,5 @@ module.exports = {
   parseGrokAuth,
   loadFromSource,
   tokenFromEntry,
+  hasProviderPool,
 };

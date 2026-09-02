@@ -66,4 +66,52 @@ describe("credential file shapes", () => {
     assert.equal(empty.chatgpt.error.code, "emptyPool");
     assert.equal(empty.grok.error.code, "emptyPool");
   });
+
+  it("empty xai-oauth pool does not ingest leftover ChatGPT tokens.access_token", () => {
+    const chatgptSingleton = "chatgpt-singleton-token";
+    const json = {
+      tokens: { access_token: chatgptSingleton, account_id: "org-chatgpt" },
+      credential_pool: {
+        "openai-codex": [{ id: "codex-1", label: "codex", access_token: chatgptSingleton }],
+        "xai-oauth": [],
+      },
+    };
+    const grok = parseGrokAuth(json);
+    assert.equal(grok.length, 0);
+    assert.equal(
+      grok.some((account) => account.accessToken === chatgptSingleton),
+      false,
+    );
+    const loaded = loadFromSource(
+      "hermes",
+      { readFileSync: () => JSON.stringify(json) },
+      { hermes: "/hermes-auth.json" },
+    );
+    assert.equal(loaded.grok.accounts.length, 0);
+    assert.equal(loaded.grok.error.code, "emptyPool");
+    assert.equal(
+      loaded.grok.accounts.some((account) => account.accessToken === chatgptSingleton),
+      false,
+    );
+  });
+
+  it("empty openai-codex pool does not steal Grok singleton tokens", () => {
+    const grokSingleton = "grok-singleton-token";
+    const json = {
+      tokens: { access_token: grokSingleton },
+      providers: {
+        "xai-oauth": { tokens: { access_token: grokSingleton } },
+      },
+      credential_pool: {
+        "openai-codex": [],
+        "xai-oauth": [{ id: "g1", label: "grok-pool", access_token: grokSingleton }],
+      },
+    };
+    const chatgpt = parseChatgptAuth(json);
+    assert.equal(chatgpt.length, 0);
+    assert.equal(
+      chatgpt.some((account) => account.accessToken === grokSingleton),
+      false,
+    );
+  });
 });
