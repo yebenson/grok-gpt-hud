@@ -1,6 +1,11 @@
 node_modules/
 dist/
 out/
+bin/
+obj/
+.vs/
+*.user
+*.suo
 *.log
 .DS_Store
 Thumbs.db
