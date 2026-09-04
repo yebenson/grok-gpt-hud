@@ -19,6 +19,7 @@ public sealed class HiddenSettings
 public sealed class WidgetSettings
 {
     public string Source { get; set; } = QuotaPaths.Hermes;
+    public string Locale { get; set; } = AppLocale.English;
     public HiddenSettings Hidden { get; set; } = new();
     public int TransparencyPercent { get; set; }
     public bool AlwaysOnTop { get; set; } = true;
@@ -61,9 +62,17 @@ public sealed class FileSettingsBackend(string path) : ISettingsBackend
     }
 }
 
-public sealed class VisibilityStore(ISettingsBackend backend)
+public sealed class VisibilityStore
 {
-    WidgetSettings _data = Normalize(backend.Load());
+    readonly ISettingsBackend _backend;
+    WidgetSettings _data;
+
+    public VisibilityStore(ISettingsBackend backend)
+    {
+        _backend = backend;
+        _data = Normalize(backend.Load());
+        UiText.Locale = AppLocale.Normalize(_data.Locale);
+    }
 
     public string GetSource() => QuotaPaths.Normalize(_data.Source);
 
@@ -106,6 +115,15 @@ public sealed class VisibilityStore(ISettingsBackend backend)
         Persist();
     }
 
+    public string GetLocale() => AppLocale.Normalize(_data.Locale);
+
+    public void SetLocale(string locale)
+    {
+        _data.Locale = AppLocale.Normalize(locale);
+        UiText.Locale = _data.Locale;
+        Persist();
+    }
+
     List<string> Bucket(string source, string side)
     {
         var map = QuotaPaths.Normalize(source) switch
@@ -119,14 +137,16 @@ public sealed class VisibilityStore(ISettingsBackend backend)
 
     void Persist()
     {
-        backend.Save(_data);
-        _data = Normalize(backend.Load());
+        _backend.Save(_data);
+        _data = Normalize(_backend.Load());
+        UiText.Locale = AppLocale.Normalize(_data.Locale);
     }
 
     static WidgetSettings Normalize(WidgetSettings? raw)
     {
         raw ??= new WidgetSettings();
         raw.Source = QuotaPaths.Normalize(raw.Source);
+        raw.Locale = AppLocale.Normalize(raw.Locale);
         raw.Hidden ??= new HiddenSettings();
         raw.Hidden.Hermes ??= new SideHidden();
         raw.Hidden.Terminal ??= new SideHidden();

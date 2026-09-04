@@ -21,14 +21,14 @@ public static class QuotaPaths
     {
         Terminal => "Windows Terminal",
         OpenClaw => "OpenClaw",
-        _ => "Windows Hermes",
+        _ => "Hermes Agent",
     };
 
     public static string ChipLabel(string source) => Normalize(source) switch
     {
         Terminal => "Terminal",
         OpenClaw => "OpenClaw",
-        _ => "Hermes",
+        _ => "Hermes Agent",
     };
 
     public static string HomeDir(IReadOnlyDictionary<string, string?> env, bool windows)

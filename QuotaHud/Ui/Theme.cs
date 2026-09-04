@@ -43,8 +43,7 @@ static class HudFonts
     public static void Draw(Graphics g, string text, float x, float y, Color color, float size, FontStyle style = FontStyle.Regular, bool center = false)
     {
         if (string.IsNullOrEmpty(text)) return;
-        using var zh = Zh(size, style);
-        using var en = En(size, style);
+        size += 1f; // English default: one pixel larger for readability
         using var brush = new SolidBrush(color);
         float width = 0;
         foreach (var run in Runs(text))

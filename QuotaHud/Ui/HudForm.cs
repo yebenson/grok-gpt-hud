@@ -43,13 +43,13 @@ public sealed class HudForm : Form
         TopMost = _visibility.GetAlwaysOnTop();
         BackColor = Color.Black;
         ForeColor = Theme.Ink;
-        Font = HudFonts.Zh(14);
+        Font = HudFonts.Zh(15);
         ClientSize = new Size(Theme.WidthPx, 420);
         DoubleBuffered = false;
         SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.ResizeRedraw, true);
         SetStyle(ControlStyles.OptimizedDoubleBuffer, false);
         ContextMenuStrip = _menu;
-        _menu.Font = HudFonts.Zh(14);
+        _menu.Font = HudFonts.Zh(15);
         _menu.Opening += (_, _) => RebuildMenu();
         MouseDown += DragWindow;
         TryLoadIcon();
@@ -141,7 +141,7 @@ public sealed class HudForm : Form
         if (!_ready)
         {
             DrawSourceChip(g, new Rectangle(Theme.Gap, Theme.Gap, Theme.WidthPx - Theme.Gap * 2, Theme.TitleHeight));
-            HudFonts.Draw(g, "正在读取配额…", Width / 2f, Height / 2f - 10, Theme.Secondary, 15, center: true);
+            HudFonts.Draw(g, UiText.Loading, Width / 2f, Height / 2f - 10, Theme.Secondary, 15, center: true);
             return;
         }
 
@@ -160,7 +160,12 @@ public sealed class HudForm : Form
         WindowGlass.StrokeRound(g, box, Theme.CardBorder, Theme.Corner);
         var source = QuotaPaths.ChipLabel(_state.Source);
         HudFonts.Draw(g, source, bounds.X + 12, bounds.Y + 4, Theme.Ink, 15, FontStyle.Bold);
-        HudFonts.Draw(g, "右键", bounds.Right - 42, bounds.Y + 5, Theme.Secondary, 13);
+        var hint = UiText.RightClick;
+        using (var measureFont = HudFonts.En(14))
+        {
+            var hintWidth = g.MeasureString(hint, measureFont, 1000, StringFormat.GenericTypographic).Width;
+            HudFonts.Draw(g, hint, bounds.Right - 12 - hintWidth, bounds.Y + 5, Theme.Secondary, 13);
+        }
     }
 
     async Task OnFirstLoad()
@@ -279,11 +284,17 @@ public sealed class HudForm : Form
     {
         _menu.Items.Clear();
         var source = _state.Source;
-        _menu.Items.Add(Radio("Windows Hermes", source == QuotaPaths.Hermes, () => _ = _session.SetSource(QuotaPaths.Hermes)));
+        var locale = _visibility.GetLocale();
+        _menu.Items.Add(Radio("Hermes Agent", source == QuotaPaths.Hermes, () => _ = _session.SetSource(QuotaPaths.Hermes)));
         _menu.Items.Add(Radio("Windows Terminal", source == QuotaPaths.Terminal, () => _ = _session.SetSource(QuotaPaths.Terminal)));
         _menu.Items.Add(Radio("OpenClaw", source == QuotaPaths.OpenClaw, () => _ = _session.SetSource(QuotaPaths.OpenClaw)));
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(new ToolStripMenuItem("立即刷新", null, async (_, _) => await _session.RefreshNow(manual: true)));
+        _menu.Items.Add(new ToolStripMenuItem(UiText.RefreshNow, null, async (_, _) => await _session.RefreshNow(manual: true)));
+        _menu.Items.Add(new ToolStripSeparator());
+        var language = new ToolStripMenuItem(UiText.Language);
+        language.DropDownItems.Add(Radio(UiText.English, locale == AppLocale.English, () => SetLocale(AppLocale.English)));
+        language.DropDownItems.Add(Radio(UiText.Chinese, locale == AppLocale.Chinese, () => SetLocale(AppLocale.Chinese)));
+        _menu.Items.Add(language);
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem("Grok") { Enabled = false });
         foreach (var account in AccountsFor("grok")) _menu.Items.Add(AccountItem("grok", account));
@@ -291,7 +302,7 @@ public sealed class HudForm : Form
         _menu.Items.Add(new ToolStripMenuItem("ChatGPT") { Enabled = false });
         foreach (var account in AccountsFor("chatgpt")) _menu.Items.Add(AccountItem("chatgpt", account));
         _menu.Items.Add(new ToolStripSeparator());
-        var pin = new ToolStripMenuItem("窗口置顶") { Checked = TopMost, CheckOnClick = true };
+        var pin = new ToolStripMenuItem(UiText.AlwaysOnTop) { Checked = TopMost, CheckOnClick = true };
         pin.Click += (_, _) =>
         {
             _visibility.SetAlwaysOnTop(pin.Checked);
@@ -299,7 +310,19 @@ public sealed class HudForm : Form
         };
         _menu.Items.Add(pin);
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(new ToolStripMenuItem("退出", null, (_, _) => Close()));
+        _menu.Items.Add(new ToolStripMenuItem(UiText.Exit, null, (_, _) => Close()));
+    }
+
+    void SetLocale(string locale)
+    {
+        _visibility.SetLocale(locale);
+        _ = RelocalizeAsync();
+    }
+
+    async Task RelocalizeAsync()
+    {
+        try { await _session.RefreshNow(manual: true); }
+        catch { ApplyState(_session.CurrentState()); Invalidate(); }
     }
 
     void ApplyGlass()

@@ -29,7 +29,7 @@ public static class DashboardState
                 return "";
         }
 
-        return $"重置 {date.ToString("M月d日 HH:mm", CultureInfo.GetCultureInfo("zh-CN"))}";
+        return UiText.FormatReset(date);
     }
 
     static DateTime FromUnix(double number)
@@ -87,7 +87,7 @@ public static class DashboardState
         };
         if (!result.Ok)
         {
-            baseAccount.Error = result.Error?.Message ?? "拉取失败";
+            baseAccount.Error = result.Error is null ? UiText.Error("network") : UiText.Error(result.Error.Code);
             baseAccount.Quota = result.Quota;
             return baseAccount;
         }

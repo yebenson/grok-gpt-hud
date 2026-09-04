@@ -2,14 +2,14 @@ namespace QuotaHud;
 
 public static class ErrorMessages
 {
-    public const string MissingFile = "读不到凭证";
-    public const string EmptyPool = "池里没有账号";
-    public const string Expired = "凭证过期，去 Hermes / OpenClaw 或对应 CLI 重新登录";
-    public const string Forbidden = "接口拒绝";
-    public const string Network = "拉取失败";
-    public const string Retry = "拉取失败，将自动重试";
-    public const string Parse = "额度数据无法解析";
-    public const string MissingQuota = "没有额度数据";
+    public static string MissingFile => UiText.Error("missingFile");
+    public static string EmptyPool => UiText.Error("emptyPool");
+    public static string Expired => UiText.Error("expired");
+    public static string Forbidden => UiText.Error("forbidden");
+    public static string Network => UiText.Error("network");
+    public static string Retry => UiText.Error("retry");
+    public static string Parse => UiText.Error("parse");
+    public static string MissingQuota => UiText.Error("missingQuota");
 }
 
 public sealed class HttpStatusException(int status, string message) : Exception(message)
@@ -21,7 +21,7 @@ public static class ErrorClassifier
 {
     public static QuotaError Classify(Exception? error)
     {
-        if (error is null) return new QuotaError("network", ErrorMessages.Retry);
+        if (error is null) return new QuotaError("retry", ErrorMessages.Retry);
         var status = error is HttpStatusException http ? http.Status : 0;
         if (status == 401) return new QuotaError("expired", ErrorMessages.Expired);
         if (status == 403) return new QuotaError("forbidden", ErrorMessages.Forbidden);
@@ -32,11 +32,12 @@ public static class ErrorClassifier
             || error.Message.Contains("socket", StringComparison.OrdinalIgnoreCase)
             || error is HttpRequestException or TaskCanceledException or TimeoutException)
         {
-            return new QuotaError("network", ErrorMessages.Retry);
+            return new QuotaError("retry", ErrorMessages.Retry);
         }
 
-        return new QuotaError("network", ErrorMessages.Retry);
+        return new QuotaError("retry", ErrorMessages.Retry);
     }
 
-    public static string? SideErrorMessage(QuotaError? error) => error?.Message;
+    public static string? SideErrorMessage(QuotaError? error) =>
+        error is null ? null : UiText.Error(error.Code);
 }

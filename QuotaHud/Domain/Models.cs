@@ -99,7 +99,7 @@ public sealed class HudState
     public string Phase { get; set; } = "loading";
     public bool Loaded { get; set; }
     public string Source { get; set; } = QuotaPaths.Hermes;
-    public string SourceLabel { get; set; } = "Windows Hermes";
+    public string SourceLabel { get; set; } = "Hermes Agent";
     public SideState Grok { get; set; } = new();
     public SideState Chatgpt { get; set; } = new();
 }
