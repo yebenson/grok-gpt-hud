@@ -1,5 +1,7 @@
 # grok-gpt-hud
 
+**中文** | [English](README.en.md)
+
 Windows 桌面常驻小组件：只读显示 SuperGrok 与 ChatGPT/Codex 额度。界面中文，上 Grok、下 ChatGPT。
 
 单文件 exe 自行完成读凭证、换票、拉额度与绘制；不依赖其它本地服务。需要本机 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)、HTTPS 网络，以及已登录的 Hermes / Terminal / OpenClaw 凭证。
