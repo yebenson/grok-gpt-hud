@@ -10,6 +10,12 @@ Windows 桌面常驻小组件：只读显示 SuperGrok 与 ChatGPT/Codex 额度�
 
 本程序**不写入** token，也**不改写**任何 `auth.json`、OpenClaw SQLite 或 CLI / Hermes 文件。access token 过期时只用凭证里的 `refresh_token` **在内存中**换新票；新票不落盘。仍 401 时请到对应工具重新登录。
 
+## 截图
+
+| Windows Hermes | OpenClaw | Windows Terminal |
+| --- | --- | --- |
+| ![Hermes](docs/Hermes.png) | ![OpenClaw](docs/OpenClaw.png) | ![Terminal](docs/Terminal.png) |
+
 ## 许可证
 
 以 [MIT License](LICENSE) 开源发布。

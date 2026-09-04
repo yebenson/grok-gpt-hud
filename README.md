@@ -10,6 +10,12 @@ Features: borderless, optional always-on-top, notification-area icon (no taskbar
 
 This app **never writes** tokens and **never modifies** any `auth.json`, OpenClaw SQLite, or CLI / Hermes files. When an access token expires, it uses the credential’s `refresh_token` **in memory only**; refreshed tokens are not saved to disk. If you still get 401, sign in again in the matching tool.
 
+## Screenshots
+
+| Windows Hermes | OpenClaw | Windows Terminal |
+| --- | --- | --- |
+| ![Hermes](docs/Hermes.png) | ![OpenClaw](docs/OpenClaw.png) | ![Terminal](docs/Terminal.png) |
+
 ## License
 
 Released under the [MIT License](LICENSE).
