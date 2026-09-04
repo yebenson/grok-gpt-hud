@@ -1,5 +1,8 @@
+# Build / publish
 node_modules/
 dist/
+dist/**
+*.exe
 out/
 bin/
 obj/
@@ -7,12 +10,22 @@ obj/
 *.user
 *.suo
 *.log
+
+# Tests (local only; not published to GitHub)
+QuotaHud.Tests/
+
+# IDE / agent
+.cursor/
+.cache/
+agent-tools/
+
+# OS / junk
 .DS_Store
 Thumbs.db
 coverage/
-.cache/
-agent-tools/
 assets/
+
+# Secrets
 *.auth.json
 .env
 .env.*

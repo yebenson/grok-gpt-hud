@@ -83,8 +83,7 @@ Windows 桌面常驻小组件：只读显示 SuperGrok 与 ChatGPT/Codex 额度�
 ## 运行与打包
 
 ```bash
-dotnet test
 dotnet publish QuotaHud/QuotaHud.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o dist
 ```
 
-产物：`dist/grok-gpt-hud.exe`。开发：`dotnet run --project QuotaHud/QuotaHud.csproj`。
+产物：`dist/grok-gpt-hud.exe`（本地生成，不纳入 Git）。开发：`dotnet run --project QuotaHud/QuotaHud.csproj`。
