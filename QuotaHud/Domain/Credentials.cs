@@ -15,12 +15,12 @@ public static class Credentials
     public static IReadOnlyList<Account> ParseChatgptAuth(JsonNode json)
     {
         var fromPool = CollectFromPool(json, "openai-codex", "chatgpt");
-        if (fromPool.Present) return fromPool.Accounts;
+        if (fromPool.Present) return DedupeChatgpt(fromPool.Accounts);
         var fromAccounts = CollectAccountsArray(json, "chatgpt");
-        if (fromAccounts.Count > 0) return fromAccounts;
+        if (fromAccounts.Count > 0) return DedupeChatgpt(fromAccounts);
         var fromSingleton = CollectCodexSingleton(json);
-        if (fromSingleton.Count > 0) return fromSingleton;
-        return CollectProviderSingleton(json, "openai-codex", "chatgpt");
+        if (fromSingleton.Count > 0) return DedupeChatgpt(fromSingleton);
+        return DedupeChatgpt(CollectProviderSingleton(json, "openai-codex", "chatgpt"));
     }
 
     public static IReadOnlyList<Account> ParseGrokAuth(JsonNode json)
@@ -284,6 +284,22 @@ public static class Credentials
         var key = $"{account.Side}:{account.Id}";
         if (list.Any(item => $"{item.Side}:{item.Id}" == key)) return;
         list.Add(account);
+    }
+
+    // Hermes sometimes copies one OAuth login into every openai-codex slot.
+    // Collapse only identical access tokens. Team seats can share chatgpt_account_id
+    // while still being distinct logins with different tokens — keep those separate.
+    static List<Account> DedupeChatgpt(IReadOnlyList<Account> accounts)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var list = new List<Account>();
+        foreach (var account in accounts)
+        {
+            if (!seen.Add(account.AccessToken)) continue;
+            list.Add(account);
+        }
+
+        return list;
     }
 
     static (bool Ok, JsonNode? Json, QuotaError? Error, string Path) ReadJsonFile(IAuthFileReader fs, string filePath)

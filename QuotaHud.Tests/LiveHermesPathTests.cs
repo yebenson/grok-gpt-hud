@@ -5,24 +5,14 @@ public class LiveHermesPathTests
     [Fact]
     public void Windows_default_hermes_path_points_at_localappdata()
     {
+        if (!OperatingSystem.IsWindows()) return;
+
         var paths = QuotaPaths.ForSource("hermes");
-        if (OperatingSystem.IsWindows())
-        {
-            var expected = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "hermes",
-                "auth.json");
-            var legacy = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".hermes",
-                "auth.json");
-            Assert.True(
-                paths.Hermes == expected || paths.Hermes == legacy,
-                $"Hermes path was {paths.Hermes}");
-            Assert.False(
-                paths.Hermes == legacy && File.Exists(expected),
-                "Must prefer %LOCALAPPDATA%\\hermes\\auth.json when it exists");
-        }
+        var expected = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "hermes",
+            "auth.json");
+        Assert.Equal(expected, paths.Hermes);
     }
 
     [Fact]

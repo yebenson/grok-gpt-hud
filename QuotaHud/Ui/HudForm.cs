@@ -12,6 +12,7 @@ public sealed class HudForm : Form
     readonly QuotaSession _session;
     readonly System.Windows.Forms.Timer _timer = new() { Interval = 30_000 };
     readonly ContextMenuStrip _menu = new();
+    readonly NotifyIcon _tray = new();
     readonly List<HudTile> _tiles = [];
     HudState _state = new();
     bool _placed;
@@ -33,10 +34,10 @@ public sealed class HudForm : Form
                 else ApplyState(state);
             });
 
-        Text = "配额小组件";
+        Text = "grok-gpt-hud";
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
-        ShowInTaskbar = true;
+        ShowInTaskbar = false;
         TopMost = _visibility.GetAlwaysOnTop();
         BackColor = Color.Black;
         ForeColor = Theme.Ink;
@@ -49,6 +50,15 @@ public sealed class HudForm : Form
         _menu.Font = HudFonts.Zh(14);
         _menu.Opening += (_, _) => RebuildMenu();
         MouseDown += DragWindow;
+        TryLoadIcon();
+        _tray.Text = "grok-gpt-hud";
+        _tray.Visible = true;
+        _tray.ContextMenuStrip = _menu;
+        _tray.MouseClick += (_, e) =>
+        {
+            if (e.Button != MouseButtons.Left) return;
+            ShowHud();
+        };
 
         _timer.Tick += async (_, _) => await TickAutoRefresh();
         Load += async (_, _) => await OnFirstLoad();
@@ -63,6 +73,7 @@ public sealed class HudForm : Form
             cp.ExStyle &= ~0x00080000; // WS_EX_LAYERED
             cp.ExStyle &= ~0x00000100; // WS_EX_DLGMODALFRAME
             cp.ExStyle &= ~0x00000200; // WS_EX_CLIENTEDGE
+            cp.ExStyle |= 0x00000080;  // WS_EX_TOOLWINDOW — no taskbar button
             cp.Style &= ~0x00800000;   // WS_BORDER
             return cp;
         }
@@ -71,6 +82,7 @@ public sealed class HudForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
+        ApplyWindowIcons();
         ApplyGlass();
     }
 
@@ -83,8 +95,21 @@ public sealed class HudForm : Form
     protected override void WndProc(ref Message m)
     {
         const int WmEraseBkgnd = 0x0014;
+        const int WmMoving = 0x0216;
         const int WmDwmCompositionChanged = 0x031E;
         const int WmThemeChanged = 0x031A;
+        if (m.Msg == WmMoving)
+        {
+            var rect = Marshal.PtrToStructure<RawRect>(m.LParam);
+            var bounds = Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
+            var snapped = EdgeSnap.Snap(bounds, Screen.FromRectangle(bounds).WorkingArea);
+            rect.Left = snapped.Left;
+            rect.Top = snapped.Top;
+            rect.Right = snapped.Right;
+            rect.Bottom = snapped.Bottom;
+            Marshal.StructureToPtr(rect, m.LParam, true);
+        }
+
         if (m.Msg == WmEraseBkgnd)
         {
             using var g = Graphics.FromHdc(m.WParam);
@@ -145,6 +170,7 @@ public sealed class HudForm : Form
     {
         var area = Screen.FromPoint(Cursor.Position).WorkingArea;
         Location = new Point(Math.Max(area.Left, area.Right - Width - 24), area.Top + 24);
+        Bounds = EdgeSnap.Snap(Bounds, area);
         _placed = true;
     }
 
@@ -185,6 +211,7 @@ public sealed class HudForm : Form
             y = AddSide(false, state.Chatgpt, x, y, w);
             var working = Screen.FromPoint(Cursor.Position).WorkingArea.Height;
             ClientSize = new Size(Theme.WidthPx, Math.Min(working - 48, y));
+            Bounds = EdgeSnap.Constrain(Bounds, Screen.FromPoint(Cursor.Position).WorkingArea);
 
             if (!_placed) PlaceTopRight();
             ApplyGlass();
@@ -288,6 +315,34 @@ public sealed class HudForm : Form
         return item;
     }
 
+    void ShowHud()
+    {
+        if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
+        Show();
+        Activate();
+        BringToFront();
+    }
+
+    void TryLoadIcon()
+    {
+        Icon = (Icon)AppBranding.Window.Clone();
+        _tray.Icon = (Icon)AppBranding.Tray.Clone();
+    }
+
+    void ApplyWindowIcons()
+    {
+        const int wmSetIcon = 0x0080;
+        SendMessage(Handle, wmSetIcon, 0, AppBranding.Tray.Handle);
+        SendMessage(Handle, wmSetIcon, 1, AppBranding.Window.Handle);
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        _tray.Visible = false;
+        _tray.Dispose();
+        base.OnFormClosed(e);
+    }
+
     void DragWindow(object? sender, MouseEventArgs e)
     {
         if (e.Button != MouseButtons.Left) return;
@@ -297,6 +352,16 @@ public sealed class HudForm : Form
 
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+    [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, IntPtr lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    struct RawRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
 }
 
 readonly record struct HudTile(Rectangle Bounds, HudKind Kind, bool Grok, RendererAccount? Account);

@@ -55,6 +55,94 @@ public class CredentialsTests
     }
 
     [Fact]
+    public void Collapses_chatgpt_pool_entries_that_share_access_token()
+    {
+        var shared = FakeJwt(new Dictionary<string, object>
+        {
+            ["email"] = "a@x.com",
+            ["https://api.openai.com/auth"] = new Dictionary<string, string>
+            {
+                ["chatgpt_account_id"] = "org-shared",
+                ["chatgpt_plan_type"] = "pro",
+            },
+        });
+        var other = FakeJwt(new Dictionary<string, object>
+        {
+            ["email"] = "b@x.com",
+            ["https://api.openai.com/auth"] = new Dictionary<string, string>
+            {
+                ["chatgpt_account_id"] = "org-other",
+                ["chatgpt_plan_type"] = "team",
+            },
+        });
+        var json = Parse($$"""
+        {
+          "credential_pool": {
+            "openai-codex": [
+              { "id": "a1", "label": "A", "access_token": "{{shared}}", "refresh_token": "rt" },
+              { "id": "a2", "label": "B", "access_token": "{{shared}}", "refresh_token": "rt" },
+              { "id": "a3", "label": "C", "access_token": "{{other}}", "refresh_token": "rt2" }
+            ]
+          }
+        }
+        """);
+        var chatgpt = Credentials.ParseChatgptAuth(json);
+        Assert.Equal(2, chatgpt.Count);
+        Assert.Equal(["a1", "a3"], chatgpt.Select(a => a.Id).ToArray());
+        Assert.Equal("org-shared", chatgpt[0].AccountId);
+        Assert.Equal("org-other", chatgpt[1].AccountId);
+    }
+
+    [Fact]
+    public void Keeps_team_logins_that_share_account_id_but_have_distinct_tokens()
+    {
+        var seatA = FakeJwt(new Dictionary<string, object>
+        {
+            ["email"] = "a@team.com",
+            ["https://api.openai.com/auth"] = new Dictionary<string, string>
+            {
+                ["chatgpt_account_id"] = "org-team",
+                ["chatgpt_plan_type"] = "team",
+            },
+        });
+        var seatB = FakeJwt(new Dictionary<string, object>
+        {
+            ["email"] = "b@team.com",
+            ["https://api.openai.com/auth"] = new Dictionary<string, string>
+            {
+                ["chatgpt_account_id"] = "org-team",
+                ["chatgpt_plan_type"] = "team",
+            },
+        });
+        var pro = FakeJwt(new Dictionary<string, object>
+        {
+            ["email"] = "pro@x.com",
+            ["https://api.openai.com/auth"] = new Dictionary<string, string>
+            {
+                ["chatgpt_account_id"] = "org-pro",
+                ["chatgpt_plan_type"] = "pro",
+            },
+        });
+        Assert.NotEqual(seatA, seatB);
+        var json = Parse($$"""
+        {
+          "credential_pool": {
+            "openai-codex": [
+              { "id": "pro1", "label": "Pro", "access_token": "{{pro}}", "refresh_token": "rt0" },
+              { "id": "t1", "label": "GPT-B", "access_token": "{{seatA}}", "refresh_token": "rt1" },
+              { "id": "t2", "label": "GPT-C", "access_token": "{{seatB}}", "refresh_token": "rt2" }
+            ]
+          }
+        }
+        """);
+        var chatgpt = Credentials.ParseChatgptAuth(json);
+        Assert.Equal(3, chatgpt.Count);
+        Assert.Equal(["pro1", "t1", "t2"], chatgpt.Select(a => a.Id).ToArray());
+        Assert.Equal("org-team", chatgpt[1].AccountId);
+        Assert.Equal("org-team", chatgpt[2].AccountId);
+    }
+
+    [Fact]
     public void Does_not_hard_cap_cli_auth_json_at_one_account()
     {
         var json = Parse("""

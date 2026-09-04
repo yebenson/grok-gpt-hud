@@ -35,24 +35,13 @@ public static class QuotaPaths
         return Path.Combine(HomeDir(env, false), ".hermes");
     }
 
-    public static string HermesAuthPath(
-        IReadOnlyDictionary<string, string?> env,
-        bool windows,
-        Func<string, bool>? exists = null)
-    {
-        exists ??= File.Exists;
-        var primary = Path.Combine(HermesHome(env, windows), "auth.json");
-        if (exists(primary)) return primary;
-        var legacy = Path.Combine(HomeDir(env, windows), ".hermes", "auth.json");
-        if (exists(legacy)) return legacy;
-        return primary;
-    }
+    public static string HermesAuthPath(IReadOnlyDictionary<string, string?> env, bool windows) =>
+        Path.Combine(HermesHome(env, windows), "auth.json");
 
     public static CredentialPaths ForSource(
         string source,
         IReadOnlyDictionary<string, string?> env,
-        bool windows,
-        Func<string, bool>? exists = null)
+        bool windows)
     {
         if (source == Terminal)
         {
@@ -64,7 +53,7 @@ public static class QuotaPaths
                 Grok: Path.Combine(home, ".grok", "auth.json"));
         }
 
-        var hermes = HermesAuthPath(env, windows, exists);
+        var hermes = HermesAuthPath(env, windows);
         return new CredentialPaths(Hermes, hermes, hermes, hermes);
     }
 

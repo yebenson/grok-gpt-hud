@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>QuotaHud</RootNamespace>
-    <AssemblyName>配额小组件</AssemblyName>
-    <Product>配额小组件</Product>
+    <AssemblyName>grok-gpt-hud</AssemblyName>
+    <Product>grok-gpt-hud</Product>
     <Description>Always-on-top Windows widget for SuperGrok and ChatGPT/Codex quota. Read-only credentials.</Description>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -23,6 +23,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Brand\chatgpt.png" />
     <EmbeddedResource Include="Brand\supergrok.png" />
+    <EmbeddedResource Include="Brand\app.ico" />
+    <EmbeddedResource Include="Brand\app.png" />
   </ItemGroup>
 
 </Project>
