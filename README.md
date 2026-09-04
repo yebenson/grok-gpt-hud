@@ -16,10 +16,6 @@ Single-file `grok-gpt-hud.exe` reads credentials, refreshes tokens in memory, fe
 | --- | --- | --- |
 | ![Hermes Agent](docs/Hermes.png) | ![OpenClaw](docs/OpenClaw.png) | ![Terminal](docs/Terminal.png) |
 
-## License
-
-[MIT License](LICENSE)
-
 ## Stack
 
 | Layer | Detail |
@@ -87,3 +83,7 @@ dotnet publish QuotaHud/QuotaHud.csproj -c Release -r win-x64 --self-contained f
 ```
 
 Output: `dist/grok-gpt-hud.exe` (not committed). Dev: `dotnet run --project QuotaHud/QuotaHud.csproj`.
+
+## License
+
+[MIT License](LICENSE)

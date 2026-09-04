@@ -18,10 +18,6 @@ Windows 桌面常驻额度小组件：只读显示 SuperGrok 与 ChatGPT/Codex �
 | Hermes Agent | OpenClaw | Terminal         |
 
 
-## 许可证
-
-[MIT License](LICENSE)
-
 ## 技术路线
 
 
@@ -93,3 +89,7 @@ dotnet publish QuotaHud/QuotaHud.csproj -c Release -r win-x64 --self-contained f
 ```
 
 产物：`dist/grok-gpt-hud.exe`（不纳入 Git）。开发：`dotnet run --project QuotaHud/QuotaHud.csproj`。
+
+## 许可证
+
+[MIT License](LICENSE)
