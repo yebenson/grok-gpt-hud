@@ -2,7 +2,7 @@
 
 [中文](README.zh-CN.md) | **English**
 
-Windows always-on-top HUD for **read-only** SuperGrok and ChatGPT/Codex quota. Grok on top, ChatGPT below. UI language: **English** (default) or 中文, switched from the right-click menu; drawn text is one pixel larger for readability.
+Windows always-on-top HUD for **read-only** SuperGrok and ChatGPT/Codex quota. Grok on top, ChatGPT below. UI language: **English** (default) or 中文, switched from the right-click menu.
 
 Single-file `grok-gpt-hud.exe` reads credentials, refreshes tokens in memory, fetches quota, and paints the UI. Needs the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0), HTTPS, and signed-in credentials for at least one source below.
 
@@ -12,9 +12,11 @@ Single-file `grok-gpt-hud.exe` reads credentials, refreshes tokens in memory, fe
 
 ## Screenshots
 
+
 | Hermes Agent | OpenClaw | Windows Terminal |
-| --- | --- | --- |
-| ![Hermes Agent](docs/Hermes.png) | ![OpenClaw](docs/OpenClaw.png) | ![Terminal](docs/Terminal.png) |
+| ------------ | -------- | ---------------- |
+| Hermes Agent | OpenClaw | Terminal         |
+
 
 ## License
 
@@ -22,14 +24,16 @@ Single-file `grok-gpt-hud.exe` reads credentials, refreshes tokens in memory, fe
 
 ## Stack
 
-| Layer | Detail |
-| --- | --- |
-| Runtime | .NET 8 WinForms (`net8.0-windows`) |
-| Publish | `win-x64` framework-dependent single file → `dist/grok-gpt-hud.exe` |
-| UI | Owner-drawn cards + DWM acrylic; logos in `QuotaHud/Brand/` |
-| Credentials | Right-click: **Hermes Agent** / **Windows Terminal** / **OpenClaw** |
-| Quota | Parallel HTTPS GET for Grok and ChatGPT |
-| Settings | `%APPDATA%\QuotaHud\settings.json` (source, locale, hidden accounts, always-on-top) |
+
+| Layer       | Detail                                                                              |
+| ----------- | ----------------------------------------------------------------------------------- |
+| Runtime     | .NET 8 WinForms (`net8.0-windows`)                                                  |
+| Publish     | `win-x64` framework-dependent single file → `dist/grok-gpt-hud.exe`                 |
+| UI          | Owner-drawn cards + DWM acrylic; logos in `QuotaHud/Brand/`                         |
+| Credentials | Right-click: **Hermes Agent** / **Windows Terminal** / **OpenClaw**                 |
+| Quota       | Parallel HTTPS GET for Grok and ChatGPT                                             |
+| Settings    | `%APPDATA%\QuotaHud\settings.json` (source, locale, hidden accounts, always-on-top) |
+
 
 Entry: `QuotaHud/Program.cs` → `HudForm`.
 
@@ -48,10 +52,12 @@ Environment overrides: `HERMES_HOME`, `OPENCLAW_HOME`, `QUOTA_WIDGET_HOME`.
 
 ### Windows Terminal
 
-| Side | Path |
-| --- | --- |
+
+| Side            | Path                             |
+| --------------- | -------------------------------- |
 | ChatGPT / Codex | `%USERPROFILE%\.codex\auth.json` |
-| SuperGrok | `%USERPROFILE%\.grok\auth.json` |
+| SuperGrok       | `%USERPROFILE%\.grok\auth.json`  |
+
 
 Parse order per side: pool → `accounts` → CLI singleton / map.
 
@@ -68,7 +74,7 @@ Cards omit Grok `device_code` and ChatGPT emails. Hide accounts from the context
 
 - Immediate fetch on startup
 - Every **5 minutes**, check whether to auto-poll
-- Auto-poll only if local time is **09:00 ≤ hour &lt; 18:00** and ≥ **15 minutes** since the last auto-poll
+- Auto-poll only if local time is **09:00 ≤ hour < 18:00** and ≥ **15 minutes** since the last auto-poll
 - **Refresh now** ignores the work window
 
 Expired access tokens with a `refresh_token` are renewed in memory via OpenAI or xAI OAuth.
@@ -77,7 +83,7 @@ Expired access tokens with a `refresh_token` are renewed in memory via OpenAI or
 
 - ChatGPT `wham/usage`: **5h** / **7d** rings (`∞` when uncapped)
 - SuperGrok billing credits: remaining-percent ring
-- Colors by remaining: ≥67% blue, 33–67% yellow, &lt;33% red
+- Colors by remaining: ≥67% blue, 33–67% yellow, <33% red
 - ChatGPT plan badges: Go / Plus / Pro / Team / Business / Enterprise / Edu
 
 ## Build
