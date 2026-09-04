@@ -56,6 +56,10 @@ public static class Credentials
 
     public static LoadedSource LoadFromSource(string source, IAuthFileReader fs, CredentialPaths paths)
     {
+        source = QuotaPaths.Normalize(source);
+        if (source == QuotaPaths.OpenClaw)
+            return LoadOpenClaw(paths.Chatgpt);
+
         if (source == QuotaPaths.Hermes)
         {
             var file = ReadJsonFile(fs, paths.Hermes ?? paths.Chatgpt);
@@ -115,6 +119,52 @@ public static class Credentials
             Grok = new SideLoad { Accounts = grokAccounts, Error = grokError },
             Chatgpt = new SideLoad { Accounts = chatgptAccounts, Error = chatgptError },
             FilesRead = [chatgptFile.Path, grokFile.Path],
+        };
+    }
+
+    static LoadedSource LoadOpenClaw(string dbPath)
+    {
+        if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath))
+        {
+            var missing = new QuotaError("missingFile", ErrorMessages.MissingFile);
+            return new LoadedSource
+            {
+                Source = QuotaPaths.OpenClaw,
+                Grok = new SideLoad { Error = missing },
+                Chatgpt = new SideLoad { Error = missing },
+                FilesRead = [dbPath],
+            };
+        }
+
+        var raw = OpenClawAuth.ReadStoreJson(dbPath);
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            var empty = new QuotaError("emptyPool", ErrorMessages.EmptyPool);
+            return new LoadedSource
+            {
+                Source = QuotaPaths.OpenClaw,
+                Grok = new SideLoad { Error = empty },
+                Chatgpt = new SideLoad { Error = empty },
+                FilesRead = [dbPath],
+            };
+        }
+
+        var (chatgpt, grok) = OpenClawAuth.ParseStore(raw);
+        chatgpt = DedupeChatgpt(chatgpt);
+        return new LoadedSource
+        {
+            Source = QuotaPaths.OpenClaw,
+            Grok = new SideLoad
+            {
+                Accounts = grok,
+                Error = grok.Count > 0 ? null : new QuotaError("emptyPool", ErrorMessages.EmptyPool),
+            },
+            Chatgpt = new SideLoad
+            {
+                Accounts = chatgpt,
+                Error = chatgpt.Count > 0 ? null : new QuotaError("emptyPool", ErrorMessages.EmptyPool),
+            },
+            FilesRead = [dbPath],
         };
     }
 
@@ -286,10 +336,10 @@ public static class Credentials
         list.Add(account);
     }
 
-    // Hermes sometimes copies one OAuth login into every openai-codex slot.
+    // Hermes / OpenClaw sometimes copy one OAuth login into multiple slots.
     // Collapse only identical access tokens. Team seats can share chatgpt_account_id
     // while still being distinct logins with different tokens — keep those separate.
-    static List<Account> DedupeChatgpt(IReadOnlyList<Account> accounts)
+    public static List<Account> DedupeChatgpt(IReadOnlyList<Account> accounts)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var list = new List<Account>();

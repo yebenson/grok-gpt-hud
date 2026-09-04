@@ -1,30 +1,35 @@
 # grok-gpt-hud
 
-Windows 桌面常驻小组件：只读 SuperGrok 与 ChatGPT/Codex 额度。界面中文，上 Grok、下 ChatGPT。无边框、可置顶、贴边吸附；不占任务栏，图标在通知区。
+Windows 桌面常驻小组件：只读显示 SuperGrok 与 ChatGPT/Codex 额度。界面中文，上 Grok、下 ChatGPT。
 
-本程序**不写入** token，也**不改写**任何 `auth.json` 或 CLI / Hermes 文件。access token 过期时只用文件里的 `refresh_token` **在内存中**换新票再拉额度；新票不会落盘。刷新后仍 401，请到 Hermes 或对应 CLI 重新登录。
+单文件 exe 自行完成读凭证、换票、拉额度与绘制；不依赖其它本地服务。需要本机 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)、HTTPS 网络，以及已登录的 Hermes / Terminal / OpenClaw 凭证。
+
+特性：无边框、可置顶、通知区图标（不占任务栏）；松开鼠标时按窗口所在屏贴边吸附；拖动过程中刷新不改窗口位置。
+
+本程序**不写入** token，也**不改写**任何 `auth.json`、OpenClaw SQLite 或 CLI / Hermes 文件。access token 过期时只用凭证里的 `refresh_token` **在内存中**换新票；新票不落盘。仍 401 时请到对应工具重新登录。
 
 ## 技术路线
 
 | 层 | 实现 |
 | --- | --- |
-| 运行时 | .NET 8 WinForms，`net8.0-windows`，需要本机 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0) |
+| 运行时 | .NET 8 WinForms，`net8.0-windows` |
 | 发布 | `win-x64` 框架依赖单文件：`dist/grok-gpt-hud.exe` |
-| UI | 自绘卡片 + DWM acrylic（毛玻璃采桌面）；工具 logo 用于 exe / 窗口 / 托盘 |
-| 凭证 | 只读 JSON；来源在 **Windows Hermes** 与 **Windows Terminal** 之间切换 |
-| 额度 | HTTPS GET；Grok 与 ChatGPT 并行拉，单账号失败不阻塞另一侧 |
-| 本地状态 | 仅 `%APPDATA%\QuotaHud\settings.json`（来源、隐藏账号、是否置顶） |
+| UI | 自绘卡片 + DWM acrylic；`QuotaHud/Brand/` 中 logo 用于卡片 / exe / 窗口 / 托盘 |
+| 凭证 | 只读；右键切换 **Windows Hermes** / **Windows Terminal** / **OpenClaw** |
+| 额度 | HTTPS GET；Grok 与 ChatGPT 并行；单账号失败不阻塞另一侧 |
+| 本地状态 | `%APPDATA%\QuotaHud\settings.json`（来源、隐藏账号、是否置顶） |
 
-代码入口：`QuotaHud/Program.cs` → `HudForm`。领域逻辑在 `QuotaHud/Domain/`，绘制在 `QuotaHud/Ui/`。
+入口：`QuotaHud/Program.cs` → `HudForm`。逻辑在 `QuotaHud/Domain/`，界面在 `QuotaHud/Ui/`。
 
 ## 凭证路径（只读）
 
-右键在 **Windows Hermes** / **Windows Terminal** 之间切换。一次切换同时改变 Grok 与 ChatGPT 读哪一组文件。若当前来源的文件两侧都缺失，会自动改用另一来源并记住。
+一次切换同时改变 Grok 与 ChatGPT 的凭证来源。若当前来源两侧都缺失，会自动改用其它有凭证的来源并记住。
 
 可选环境变量：
 
-- `HERMES_HOME`：覆盖 Hermes 目录（其下读取 `auth.json`）
-- `QUOTA_WIDGET_HOME`：覆盖用户主目录（影响 Terminal 的 `.codex` / `.grok`）
+- `HERMES_HOME`：Hermes 目录（读取其下 `auth.json`）
+- `OPENCLAW_HOME`：OpenClaw 主目录（读取 `state/openclaw.sqlite`）
+- `QUOTA_WIDGET_HOME`：用户主目录（影响 Terminal 的 `.codex` / `.grok`，以及默认 OpenClaw 目录）
 
 ### Windows Hermes（默认）
 
@@ -32,10 +37,8 @@ Windows 桌面常驻小组件：只读 SuperGrok 与 ChatGPT/Codex 额度。界�
 | --- | --- |
 | auth.json | `%LOCALAPPDATA%\hermes\auth.json` |
 
-JSON 池：
-
-- ChatGPT / Codex → `credential_pool["openai-codex"]`（有几条有效登录显示几条；相同 `access_token` 只保留一条）
-- SuperGrok → `credential_pool["xai-oauth"]`
+- ChatGPT：`credential_pool["openai-codex"]`（相同 `access_token` 只保留一条）
+- SuperGrok：`credential_pool["xai-oauth"]`
 
 ### Windows Terminal
 
@@ -44,34 +47,38 @@ JSON 池：
 | ChatGPT / Codex | `%USERPROFILE%\.codex\auth.json` |
 | SuperGrok | `%USERPROFILE%\.grok\auth.json` |
 
-解析顺序（每侧独立）：凭证池 → `accounts` 数组 → CLI 单例 / 键值表。文件缺失记为「读不到凭证」；池为空记为「池里没有账号」。
+每侧解析：凭证池 → `accounts` → CLI 单例 / 键值表。
 
-卡片上不画 Grok `device_code`、也不画 ChatGPT 邮箱。右键菜单仍用可区分的账号名，可勾选隐藏；某一侧全部隐藏后，该侧整块（含标题）不再绘制。
+### OpenClaw
+
+| | 路径 |
+| --- | --- |
+| 状态库 | `%USERPROFILE%\.openclaw\state\openclaw.sqlite` |
+
+表 `config_machine_state`，键 `authProfiles.store`：
+
+- `provider=openai` → ChatGPT（多 profile；相同 `access` 只保留一条）
+- `provider=xai` → SuperGrok
+
+卡片不画 Grok `device_code`、不画 ChatGPT 邮箱。右键可用账号名勾选隐藏；某一侧全部隐藏后该侧整块不绘制。
 
 ## 定时刷新
 
-启动时**立刻拉一次**（不看工作时段）。之后每 **30 秒**检查一次是否该自动轮询。
+- 启动立刻拉一次（不看工作时段）
+- 每 **5 分钟**检查是否该自动轮询
+- 自动轮询需同时满足：本地时间 **09:00 ≤ 时刻 &lt; 18:00**，且距上次自动轮询 ≥ **15 分钟**
+- 右键 **立即刷新** 随时可用
 
-自动轮询同时满足：
+失败账号独立指数退避（约 15 秒起，上限 15 分钟）。过期且带 `refresh_token` 时，向 OpenAI（`https://auth.openai.com/oauth/token`）或 xAI（默认 `https://auth.x.ai` 的 `oauth2/token`）换票，只改内存中的 Account。
 
-1. 本机本地时区 **09:00 ≤ 时刻 &lt; 18:00**（18:00 起不再自动拉）
-2. 距上次自动轮询至少 **15 分钟**
+## 额度与展示
 
-右键 **立即刷新** 随时可用，不受工作时段限制。
-
-失败账号独立指数退避（约 15 秒起，上限 15 分钟），自动轮询会跳过仍在退避中的账号；手动刷新会重试它们。一侧失败不冻结另一侧。
-
-过期处理：若账号带 `refresh_token` 且 JWT / `expires_at` 已过期（提前 30 秒），先向 OpenAI（`https://auth.openai.com/oauth/token`）或 xAI（issuer 的 `oauth2/token`，默认 `https://auth.x.ai`）换票，**只改内存中的 Account**，再请求额度。401 时再换一次。换票失败则显示「凭证过期，去 Hermes 或对应 CLI 重新登录」。
-
-## 额度接口与展示
-
-- ChatGPT / Codex：`GET https://chatgpt.com/backend-api/wham/usage`（Bearer，可选 `ChatGPT-Account-Id`）
-  - **5h**：`limit_window_seconds` &lt; 86400；无 cap / unlimited 时显示 **∞**，不画重置时间
+- ChatGPT：`GET https://chatgpt.com/backend-api/wham/usage`
+  - **5h**：`limit_window_seconds` &lt; 86400；无 cap 显示 **∞**
   - **7d**：`limit_window_seconds` ≥ 86400
-- SuperGrok：`GET https://cli-chat-proxy.grok.com/v1/billing?format=credits`（Bearer + CLI 头）
-  - 一根剩余百分比环；有 cap 时在环下显示重置时间
+- SuperGrok：`GET https://cli-chat-proxy.grok.com/v1/billing?format=credits`（剩余百分比环）
 
-颜色按**剩余**百分比：≥67% 蓝，33–67% 黄，&lt;33% 红。缺数据不画假的 100%。能识别套餐时显示徽章（Plus / Pro / Team / Business / SuperGrok 等），识别不到则不显示。
+剩余颜色：≥67% 蓝，33–67% 黄，&lt;33% 红。ChatGPT 官方套餐徽章：Go / Plus / Pro / Team / Business / Enterprise / Edu。Grok 暂无可靠套餐字段时不显示徽章。
 
 ## 运行与打包
 
@@ -81,5 +88,3 @@ dotnet publish QuotaHud/QuotaHud.csproj -c Release -r win-x64 --self-contained f
 ```
 
 产物：`dist/grok-gpt-hud.exe`。开发：`dotnet run --project QuotaHud/QuotaHud.csproj`。
-
-Logo 在 `QuotaHud/Brand/`：`chatgpt.png`、`supergrok.png` 用于卡片；`app.ico` / `app.png` 用于 exe、窗口、托盘。中文微软雅黑，英文与数字 Segoe UI。

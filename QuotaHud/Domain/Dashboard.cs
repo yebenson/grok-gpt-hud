@@ -57,7 +57,7 @@ public static class DashboardState
             Phase = phase,
             Loaded = loaded,
             Source = source,
-            SourceLabel = source == QuotaPaths.Terminal ? "Windows Terminal" : "Windows Hermes",
+            SourceLabel = QuotaPaths.DisplayLabel(source),
             Grok = new SideState
             {
                 SideError = grokSideError,

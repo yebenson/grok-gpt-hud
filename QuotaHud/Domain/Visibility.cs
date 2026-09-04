@@ -13,6 +13,7 @@ public sealed class HiddenSettings
 {
     public SideHidden Hermes { get; set; } = new();
     public SideHidden Terminal { get; set; } = new();
+    public SideHidden OpenClaw { get; set; } = new();
 }
 
 public sealed class WidgetSettings
@@ -64,11 +65,11 @@ public sealed class VisibilityStore(ISettingsBackend backend)
 {
     WidgetSettings _data = Normalize(backend.Load());
 
-    public string GetSource() => _data.Source == QuotaPaths.Terminal ? QuotaPaths.Terminal : QuotaPaths.Hermes;
+    public string GetSource() => QuotaPaths.Normalize(_data.Source);
 
     public void SetSource(string source)
     {
-        _data.Source = source == QuotaPaths.Terminal ? QuotaPaths.Terminal : QuotaPaths.Hermes;
+        _data.Source = QuotaPaths.Normalize(source);
         Persist();
     }
 
@@ -107,7 +108,12 @@ public sealed class VisibilityStore(ISettingsBackend backend)
 
     List<string> Bucket(string source, string side)
     {
-        var map = source == QuotaPaths.Terminal ? _data.Hidden.Terminal : _data.Hidden.Hermes;
+        var map = QuotaPaths.Normalize(source) switch
+        {
+            QuotaPaths.Terminal => _data.Hidden.Terminal,
+            QuotaPaths.OpenClaw => _data.Hidden.OpenClaw,
+            _ => _data.Hidden.Hermes,
+        };
         return side == "grok" ? map.Grok : map.Chatgpt;
     }
 
@@ -120,14 +126,17 @@ public sealed class VisibilityStore(ISettingsBackend backend)
     static WidgetSettings Normalize(WidgetSettings? raw)
     {
         raw ??= new WidgetSettings();
-        raw.Source = raw.Source == QuotaPaths.Terminal ? QuotaPaths.Terminal : QuotaPaths.Hermes;
+        raw.Source = QuotaPaths.Normalize(raw.Source);
         raw.Hidden ??= new HiddenSettings();
         raw.Hidden.Hermes ??= new SideHidden();
         raw.Hidden.Terminal ??= new SideHidden();
+        raw.Hidden.OpenClaw ??= new SideHidden();
         raw.Hidden.Hermes.Grok ??= [];
         raw.Hidden.Hermes.Chatgpt ??= [];
         raw.Hidden.Terminal.Grok ??= [];
         raw.Hidden.Terminal.Chatgpt ??= [];
+        raw.Hidden.OpenClaw.Grok ??= [];
+        raw.Hidden.OpenClaw.Chatgpt ??= [];
         raw.TransparencyPercent = Math.Clamp(raw.TransparencyPercent, 0, 90);
         return raw;
     }

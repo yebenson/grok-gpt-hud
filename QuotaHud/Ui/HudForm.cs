@@ -10,7 +10,7 @@ public sealed class HudForm : Form
 
     readonly VisibilityStore _visibility;
     readonly QuotaSession _session;
-    readonly System.Windows.Forms.Timer _timer = new() { Interval = 30_000 };
+    readonly System.Windows.Forms.Timer _timer = new() { Interval = 5 * 60_000 };
     readonly ContextMenuStrip _menu = new();
     readonly NotifyIcon _tray = new();
     readonly List<HudTile> _tiles = [];
@@ -18,6 +18,8 @@ public sealed class HudForm : Form
     bool _placed;
     bool _ready;
     bool _applyingGlass;
+    bool _moving;
+    bool _layoutDirty;
 
     public HudForm()
     {
@@ -95,19 +97,23 @@ public sealed class HudForm : Form
     protected override void WndProc(ref Message m)
     {
         const int WmEraseBkgnd = 0x0014;
-        const int WmMoving = 0x0216;
+        const int WmEnterSizeMove = 0x0231;
+        const int WmExitSizeMove = 0x0232;
         const int WmDwmCompositionChanged = 0x031E;
         const int WmThemeChanged = 0x031A;
-        if (m.Msg == WmMoving)
+
+        if (m.Msg == WmEnterSizeMove)
         {
-            var rect = Marshal.PtrToStructure<RawRect>(m.LParam);
-            var bounds = Rectangle.FromLTRB(rect.Left, rect.Top, rect.Right, rect.Bottom);
-            var snapped = EdgeSnap.Snap(bounds, Screen.FromRectangle(bounds).WorkingArea);
-            rect.Left = snapped.Left;
-            rect.Top = snapped.Top;
-            rect.Right = snapped.Right;
-            rect.Bottom = snapped.Bottom;
-            Marshal.StructureToPtr(rect, m.LParam, true);
+            _moving = true;
+        }
+        else if (m.Msg == WmExitSizeMove)
+        {
+            _moving = false;
+            var working = HudLayout.WorkingAreaForBounds(Bounds);
+            Bounds = EdgeSnap.Snap(Bounds, working);
+            Bounds = EdgeSnap.Constrain(Bounds, working);
+            if (_layoutDirty) ApplyState(_state);
+            else ApplyGlass();
         }
 
         if (m.Msg == WmEraseBkgnd)
@@ -152,7 +158,7 @@ public sealed class HudForm : Form
         var box = new RectangleF(bounds.X + 0.5f, bounds.Y + 0.5f, bounds.Width - 1, bounds.Height - 1);
         WindowGlass.FillRound(g, box, Theme.Card, Theme.Corner);
         WindowGlass.StrokeRound(g, box, Theme.CardBorder, Theme.Corner);
-        var source = _state.Source == QuotaPaths.Terminal ? "Terminal" : "Hermes";
+        var source = QuotaPaths.ChipLabel(_state.Source);
         HudFonts.Draw(g, source, bounds.X + 12, bounds.Y + 4, Theme.Ink, 15, FontStyle.Bold);
         HudFonts.Draw(g, "右键", bounds.Right - 42, bounds.Y + 5, Theme.Secondary, 13);
     }
@@ -168,7 +174,9 @@ public sealed class HudForm : Form
 
     void PlaceTopRight()
     {
-        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+        var area = IsHandleCreated
+            ? HudLayout.WorkingAreaForBounds(Bounds)
+            : Screen.FromPoint(Cursor.Position).WorkingArea;
         Location = new Point(Math.Max(area.Left, area.Right - Width - 24), area.Top + 24);
         Bounds = EdgeSnap.Snap(Bounds, area);
         _placed = true;
@@ -193,8 +201,12 @@ public sealed class HudForm : Form
         _tiles.Clear();
         if (!_ready)
         {
-            ClientSize = new Size(Theme.WidthPx, Theme.Gap * 2 + Theme.TitleHeight + 80);
-            ApplyGlass();
+            if (!_moving)
+            {
+                ClientSize = new Size(Theme.WidthPx, Theme.Gap * 2 + Theme.TitleHeight + 80);
+                ApplyGlass();
+            }
+            else _layoutDirty = true;
             Invalidate();
             return;
         }
@@ -209,9 +221,19 @@ public sealed class HudForm : Form
             y += Theme.TitleHeight + Theme.Gap;
             y = AddSide(true, state.Grok, x, y, w);
             y = AddSide(false, state.Chatgpt, x, y, w);
-            var working = Screen.FromPoint(Cursor.Position).WorkingArea.Height;
-            ClientSize = new Size(Theme.WidthPx, Math.Min(working - 48, y));
-            Bounds = EdgeSnap.Constrain(Bounds, Screen.FromPoint(Cursor.Position).WorkingArea);
+
+            if (_moving)
+            {
+                _layoutDirty = true;
+                Invalidate();
+                return;
+            }
+
+            var working = HudLayout.WorkingAreaForBounds(Bounds);
+            ClientSize = new Size(Theme.WidthPx, Math.Min(working.Height - 48, y));
+            var next = HudLayout.ResolveBounds(Bounds, Size, working, moving: false);
+            if (next is { } bounds) Bounds = bounds;
+            _layoutDirty = false;
 
             if (!_placed) PlaceTopRight();
             ApplyGlass();
@@ -257,8 +279,9 @@ public sealed class HudForm : Form
     {
         _menu.Items.Clear();
         var source = _state.Source;
-        _menu.Items.Add(Radio("Windows Hermes", source != QuotaPaths.Terminal, () => _ = _session.SetSource(QuotaPaths.Hermes)));
+        _menu.Items.Add(Radio("Windows Hermes", source == QuotaPaths.Hermes, () => _ = _session.SetSource(QuotaPaths.Hermes)));
         _menu.Items.Add(Radio("Windows Terminal", source == QuotaPaths.Terminal, () => _ = _session.SetSource(QuotaPaths.Terminal)));
+        _menu.Items.Add(Radio("OpenClaw", source == QuotaPaths.OpenClaw, () => _ = _session.SetSource(QuotaPaths.OpenClaw)));
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem("立即刷新", null, async (_, _) => await _session.RefreshNow(manual: true)));
         _menu.Items.Add(new ToolStripSeparator());
@@ -353,15 +376,6 @@ public sealed class HudForm : Form
     [DllImport("user32.dll")] static extern bool ReleaseCapture();
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
     [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, IntPtr lParam);
-
-    [StructLayout(LayoutKind.Sequential)]
-    struct RawRect
-    {
-        public int Left;
-        public int Top;
-        public int Right;
-        public int Bottom;
-    }
 }
 
 readonly record struct HudTile(Rectangle Bounds, HudKind Kind, bool Grok, RendererAccount? Account);

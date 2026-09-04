@@ -6,6 +6,30 @@ public static class QuotaPaths
 {
     public const string Hermes = "hermes";
     public const string Terminal = "terminal";
+    public const string OpenClaw = "openclaw";
+
+    public static readonly string[] All = [Hermes, Terminal, OpenClaw];
+
+    public static string Normalize(string? source) => source switch
+    {
+        Terminal => Terminal,
+        OpenClaw => OpenClaw,
+        _ => Hermes,
+    };
+
+    public static string DisplayLabel(string source) => Normalize(source) switch
+    {
+        Terminal => "Windows Terminal",
+        OpenClaw => "OpenClaw",
+        _ => "Windows Hermes",
+    };
+
+    public static string ChipLabel(string source) => Normalize(source) switch
+    {
+        Terminal => "Terminal",
+        OpenClaw => "OpenClaw",
+        _ => "Hermes",
+    };
 
     public static string HomeDir(IReadOnlyDictionary<string, string?> env, bool windows)
     {
@@ -38,11 +62,22 @@ public static class QuotaPaths
     public static string HermesAuthPath(IReadOnlyDictionary<string, string?> env, bool windows) =>
         Path.Combine(HermesHome(env, windows), "auth.json");
 
+    public static string OpenClawHome(IReadOnlyDictionary<string, string?> env, bool windows)
+    {
+        var fromEnv = Get(env, "OPENCLAW_HOME");
+        if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
+        return Path.Combine(HomeDir(env, windows), ".openclaw");
+    }
+
+    public static string OpenClawAuthDbPath(IReadOnlyDictionary<string, string?> env, bool windows) =>
+        Path.Combine(OpenClawHome(env, windows), "state", "openclaw.sqlite");
+
     public static CredentialPaths ForSource(
         string source,
         IReadOnlyDictionary<string, string?> env,
         bool windows)
     {
+        source = Normalize(source);
         if (source == Terminal)
         {
             var home = HomeDir(env, windows);
@@ -51,6 +86,12 @@ public static class QuotaPaths
                 Hermes: null,
                 Chatgpt: Path.Combine(home, ".codex", "auth.json"),
                 Grok: Path.Combine(home, ".grok", "auth.json"));
+        }
+
+        if (source == OpenClaw)
+        {
+            var db = OpenClawAuthDbPath(env, windows);
+            return new CredentialPaths(OpenClaw, Hermes: db, Chatgpt: db, Grok: db);
         }
 
         var hermes = HermesAuthPath(env, windows);

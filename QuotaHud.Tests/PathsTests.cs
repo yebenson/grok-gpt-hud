@@ -43,4 +43,21 @@ public class PathsTests
         var paths = QuotaPaths.ForSource("terminal", env, windows: true);
         Assert.Equal(@"E:\hud-home\.codex\auth.json", paths.Chatgpt);
     }
+
+    [Fact]
+    public void Openclaw_home_environment_variable_wins()
+    {
+        var env = WindowsEnv();
+        env["OPENCLAW_HOME"] = @"D:\custom-openclaw";
+        var paths = QuotaPaths.ForSource("openclaw", env, windows: true);
+        Assert.Equal(@"D:\custom-openclaw\state\openclaw.sqlite", paths.Chatgpt);
+        Assert.Equal(paths.Chatgpt, paths.Grok);
+    }
+
+    [Fact]
+    public void Openclaw_uses_userprofile_dot_openclaw_state_db()
+    {
+        var paths = QuotaPaths.ForSource("openclaw", WindowsEnv(), windows: true);
+        Assert.Equal(@"C:\Users\Tester\.openclaw\state\openclaw.sqlite", paths.Chatgpt);
+    }
 }

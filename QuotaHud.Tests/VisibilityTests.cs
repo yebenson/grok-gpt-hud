@@ -42,6 +42,18 @@ public class VisibilityTests
         Assert.True(visibility.IsVisible("terminal", "chatgpt", "shared"));
         Assert.False(visibility.IsVisible("hermes", "chatgpt", "shared"));
     }
+
+    [Fact]
+    public void Keeps_openclaw_hide_list_independent()
+    {
+        var visibility = new VisibilityStore(new MemorySettingsBackend());
+        visibility.SetVisible("openclaw", "chatgpt", "shared", false);
+        Assert.True(visibility.IsVisible("hermes", "chatgpt", "shared"));
+        Assert.True(visibility.IsVisible("terminal", "chatgpt", "shared"));
+        Assert.False(visibility.IsVisible("openclaw", "chatgpt", "shared"));
+        visibility.SetSource("openclaw");
+        Assert.Equal("openclaw", visibility.GetSource());
+    }
 }
 
 public sealed class MemorySettingsBackend : ISettingsBackend

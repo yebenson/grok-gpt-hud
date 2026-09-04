@@ -97,4 +97,38 @@ public class SessionTests
         Assert.Equal("terminal", visibility.GetSource());
         Assert.Contains(state.Grok.All, x => x.Id == "cli-grok");
     }
+
+    [Fact]
+    public async Task Missing_hermes_and_terminal_can_fall_back_to_openclaw()
+    {
+        var visibility = new VisibilityStore(new MemorySettingsBackend { Data = { Source = "hermes" } });
+        var session = new QuotaSession(
+            visibility,
+            loadSource: source => source switch
+            {
+                "openclaw" => Loaded("openclaw", ["oc-grok"], ["oc-gpt"]),
+                _ => new LoadedSource
+                {
+                    Source = source,
+                    Grok = new SideLoad { Error = new QuotaError("missingFile", ErrorMessages.MissingFile) },
+                    Chatgpt = new SideLoad { Error = new QuotaError("missingFile", ErrorMessages.MissingFile) },
+                },
+            },
+            fetchGrok: _ => Task.FromResult(JsonNode.Parse("""{ "config": { "creditUsagePercent": 20 } }""")!),
+            fetchChatgpt: _ => Task.FromResult(JsonNode.Parse("""
+            {
+              "rate_limit": {
+                "primary_window": { "used_percent": 10, "limit_window_seconds": 18000 },
+                "secondary_window": { "used_percent": 20, "limit_window_seconds": 604800 }
+              }
+            }
+            """)!));
+
+        await session.RefreshNow(manual: true);
+        var state = session.CurrentState();
+        Assert.Equal("openclaw", state.Source);
+        Assert.Equal("openclaw", visibility.GetSource());
+        Assert.Equal("OpenClaw", state.SourceLabel);
+        Assert.Contains(state.Grok.All, x => x.Id == "oc-grok");
+    }
 }

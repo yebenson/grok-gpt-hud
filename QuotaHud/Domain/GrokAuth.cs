@@ -18,10 +18,15 @@ public static class GrokAuth
 
     public static DateTimeOffset? ParseExpiry(Account account)
     {
-        if (!string.IsNullOrWhiteSpace(account.ExpiresAt)
-            && DateTimeOffset.TryParse(account.ExpiresAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+        if (!string.IsNullOrWhiteSpace(account.ExpiresAt))
         {
-            return parsed;
+            if (DateTimeOffset.TryParse(account.ExpiresAt, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
+                return parsed;
+            if (long.TryParse(account.ExpiresAt, NumberStyles.Integer, CultureInfo.InvariantCulture, out var unix))
+            {
+                var ms = unix > 1_000_000_000_000L ? unix : unix * 1000L;
+                return DateTimeOffset.FromUnixTimeMilliseconds(ms);
+            }
         }
 
         var claims = Jwt.DecodePayload(account.AccessToken ?? "");

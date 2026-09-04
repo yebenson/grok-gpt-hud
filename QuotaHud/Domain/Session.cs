@@ -59,7 +59,7 @@ public sealed class QuotaSession
         _generation++;
         _visibility.SetSource(source);
         _loadedOnce = false;
-        _snapshot = new LoadedSource { Source = source == QuotaPaths.Terminal ? QuotaPaths.Terminal : QuotaPaths.Hermes };
+        _snapshot = new LoadedSource { Source = QuotaPaths.Normalize(source) };
         Notify();
         return RefreshNow(manual: true);
     }
@@ -117,12 +117,17 @@ public sealed class QuotaSession
     {
         nextSource = source;
         if (!BothMissing(loaded)) return loaded;
-        var other = source == QuotaPaths.Hermes ? QuotaPaths.Terminal : QuotaPaths.Hermes;
-        var otherLoaded = _loadSource(other);
-        if (BothMissing(otherLoaded)) return loaded;
-        _visibility.SetSource(other);
-        nextSource = other;
-        return otherLoaded;
+        foreach (var other in QuotaPaths.All)
+        {
+            if (other == source) continue;
+            var otherLoaded = _loadSource(other);
+            if (BothMissing(otherLoaded)) continue;
+            _visibility.SetSource(other);
+            nextSource = other;
+            return otherLoaded;
+        }
+
+        return loaded;
     }
 
     static bool BothMissing(LoadedSource loaded) =>

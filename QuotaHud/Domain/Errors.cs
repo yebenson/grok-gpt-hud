@@ -4,7 +4,7 @@ public static class ErrorMessages
 {
     public const string MissingFile = "读不到凭证";
     public const string EmptyPool = "池里没有账号";
-    public const string Expired = "凭证过期，去 Hermes 或对应 CLI 重新登录";
+    public const string Expired = "凭证过期，去 Hermes / OpenClaw 或对应 CLI 重新登录";
     public const string Forbidden = "接口拒绝";
     public const string Network = "拉取失败";
     public const string Retry = "拉取失败，将自动重试";
